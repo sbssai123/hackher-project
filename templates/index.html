@@ -1,13 +1,20 @@
 <!doctype html>
 <title>{% block title %}{% endblock %}</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<link rel="stylesheet" type= "text/css" href="{{ url_for('static', filename='style.css') }}">
 <section class="content">
   <header>
     {% block header %}{% endblock %}
   </header>
   {% block content %}
-    {% for file in files %}
-        <h2>{{ file["name"] }}</h2>
-    {% endfor %}
+    <form action="/create-slides" method="post">
+      {{ form.csrf }}
+      <div class="input text" id="text-box">
+        {{ form.name.label }} {{ form.name }}</div>
+      <div class="input submit">
+        <input type="submit" value="Submit"></div>
+    </form>
+    {% if url%}
+      <h3>View Your Presentation <a target="_blank" href={{url}}>Here:</a></h3>
+    {% endif %}
   {% endblock %}
 </section>

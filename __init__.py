@@ -1,12 +1,4 @@
 #!/usr/bin/python3
-##
-# Flask Drive Example App
-#
-# @author Prahlad Yeri <prahladyeri@yahoo.com>
-# @date 30-12-2016
-# Dependency:
-# 1. pip install flask google-api-python-client
-# 2. make sure you have client_id.json in this same directory.
 
 import os
 import flask
@@ -15,10 +7,22 @@ from apiclient import discovery
 from apiclient.http import MediaIoBaseDownload, MediaFileUpload
 from oauth2client import client
 from oauth2client import tools
+from googleapiclient.discovery import build
 from oauth2client.file import Storage
-
+from flask_wtf import FlaskForm
+from wtforms import TextField
+from requests import get
+from bs4 import BeautifulSoup
+# Imports the Google Cloud client library
+from google.cloud import language
+from google.cloud.language import enums
+from google.cloud.language import types
 
 app = flask.Flask(__name__)
+app.config.from_object(__name__)
+app.config['SECRET_KEY'] = '7d441f27d441f27567d441f2b6176a'
+# Instantiates a client
+client_language = language.LanguageServiceClient()
 
 @app.route('/')
 def index():
@@ -29,9 +33,152 @@ def index():
         return flask.redirect(flask.url_for('oauth2callback'))
     else:
         print('now calling fetch')
-        all_files = fetch("'root' in parents and mimeType = 'application/vnd.google-apps.folder'", sort='modifiedTime desc')
-    return flask.render_template("index.html", files=all_files)
-		
+        form = SlideForm()
+        return flask.render_template("index.html", form=form)
+
+@app.route('/create-slides', methods=['POST'])
+def createslides():
+    creds = get_credentials()
+    form = SlideForm()
+    information = get_info(form.name.data)
+    paragraphs = information["paragraphs"]
+    title = information["title"]
+    PBF = {
+        "propertyState": "RENDERED",
+        "solidFill": {
+            "color": {
+                "themeColor": information["theme"]
+            },
+            "alpha" : 1.0
+        }
+    }
+    # Create presentation
+    body = {
+        'title': title,
+    }
+    slides_service = build('slides', 'v1', credentials=creds)
+    presentation = slides_service.presentations() \
+    .create(body=body).execute()
+    print('Created presentation with ID: {0}'.format(
+        presentation.get('presentationId')))
+
+    # populates the title
+    first_slide = presentation.get('slides')[0]
+    header_text = first_slide.get('pageElements')[0]
+
+    pt350 = {
+        'magnitude': 350,
+        'unit': 'PT'
+    }
+    requests = []
+    requests.append(
+        {
+            'insertText': {
+                'objectId': header_text.get("objectId"),
+                'insertionIndex': 0,
+                'text': title,
+            }
+        })
+    element_id = 0
+    page_id = 0
+    for p in paragraphs:
+        new_slide = {
+            'createSlide': {
+                'objectId': "hacker" + str(page_id),
+                'insertionIndex': '1',
+                'slideLayoutReference': {
+                    'predefinedLayout': 'BLANK'
+                },
+            },
+        }
+        requests.append(new_slide)
+        text_box = {
+            'createShape': {
+                'objectId': "MY-TEXT" + str(element_id),
+                'shapeType': 'TEXT_BOX',
+                'elementProperties': {
+                    'pageObjectId': "hacker" + str(page_id),
+                    'size': {
+                        'height': pt350,
+                        'width': pt350
+                    },
+                    'transform': {
+                        'scaleX': 1,
+                        'scaleY': 1,
+                        'translateX': 60,
+                        'translateY': 60,
+                        'unit': 'PT'
+                    }
+                }
+            }
+        }
+        requests.append(text_box)
+        text = {
+            # Insert text into the box, using the supplied element ID.
+            'insertText': {
+                'objectId': "MY-TEXT" + str(element_id),
+                'insertionIndex': 0,
+                'text': p,
+            }
+        }
+        requests.append(text)
+        color = {
+            "updatePageProperties": {
+                "objectId": "hacker" + str(page_id),
+                "pageProperties": {
+                "pageBackgroundFill": PBF
+                },
+                "fields": "pageBackgroundFill"
+            }
+        }
+        requests.append(color)
+        page_id = page_id + 1
+        element_id = element_id + 1
+    body = {
+        'requests': requests
+    }
+    response = slides_service.presentations() \
+    .batchUpdate(presentationId= presentation.get('presentationId'), body=body).execute()
+
+    display_url = "https://docs.google.com/presentation/d/" + presentation.get('presentationId')
+
+    return flask.render_template("index.html", form=form, url = display_url)
+
+
+class SlideForm(FlaskForm):
+   name = TextField("Your Text")
+
+def get_info(url):
+    results = {}
+    response = get(url)
+    html_soup = BeautifulSoup(response.text, 'html.parser')
+    paragraphs = [para.getText() for para in html_soup.find_all('p')]
+    title = html_soup.find('h1').getText()
+    # text = " ".join(paragraphs)
+    document = types.Document(
+    content=title,
+    type=enums.Document.Type.PLAIN_TEXT)
+
+    # Detects the sentiment of the text
+    sentiment = client_language.analyze_sentiment(document=document).document_sentiment
+    results["paragraphs"] = paragraphs
+    results["title"] = title
+    results["theme"] = determine_color(sentiment.score)
+    print("sentiment score", sentiment.score)
+    return results
+
+def determine_color(score):
+    if score < -.7:
+        return "DARK1"
+    elif score >= -.7 and score < -.4:
+        return "DARK2"
+    elif score >= -.4 and score < 0:
+        return "ACCENT2"
+    elif score >= 0 and score  < .5:
+        return "ACCENT1"
+    else:
+        return "ACCENT6"
+
 @app.route('/oauth2callback')
 def oauth2callback():
     flow = client.flow_from_clientsecrets('client_id.json',
@@ -44,7 +191,7 @@ def oauth2callback():
     else:
         auth_code = flask.request.args.get('code')
         credentials = flow.step2_exchange(auth_code)
-        open('credentials.json','w').write(credentials.to_json()) # write access token to credentials.json locally 
+        open('credentials.json','w').write(credentials.to_json()) # write access token to credentials.json locally
         return flask.redirect(flask.url_for('index'))
 
 def get_credentials():
@@ -58,6 +205,7 @@ def get_credentials():
 	else:
 		print("Credentials fetched successfully.")
 		return credentials
+
 
 def fetch(query, sort='modifiedTime desc'):
 	credentials = get_credentials()
@@ -75,7 +223,7 @@ def download_file(file_id, output_file):
 	#file_id = '0BwwA4oUTeiV1UVNwOHItT0xfa2M'
 	request = service.files().export_media(fileId=file_id,mimeType='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 	#request = service.files().get_media(fileId=file_id)
-	
+
 	fh = open(output_file,'wb') #io.BytesIO()
 	downloader = MediaIoBaseDownload(fh, request)
 	done = False
@@ -84,7 +232,7 @@ def download_file(file_id, output_file):
 		#print ("Download %d%%." % int(status.progress() * 100))
 	fh.close()
 	#return fh
-	
+
 def update_file(file_id, local_file):
 	credentials = get_credentials()
 	http = credentials.authorize(httplib2.Http())
@@ -99,7 +247,7 @@ def update_file(file_id, local_file):
 		#body=file,
 		#newRevision=True,
 		media_body=media_body).execute()
-		
+
 if __name__ == '__main__':
 	if os.path.exists('client_id.json') == False:
 		print('Client secrets file (client_id.json) not found in the app path.')
