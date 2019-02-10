@@ -112,8 +112,8 @@ def createslides():
                     'transform': {
                         'scaleX': 1,
                         'scaleY': 1,
-                        'translateX': 80,
-                        'translateY': 80,
+                        'translateX': 60,
+                        'translateY': 60,
                         'unit': 'PT'
                     }
                 }
