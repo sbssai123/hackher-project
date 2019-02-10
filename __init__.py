@@ -19,7 +19,8 @@ from googleapiclient.discovery import build
 from oauth2client.file import Storage
 from flask_wtf import FlaskForm
 from wtforms import TextField
-
+from requests import get
+from bs4 import BeautifulSoup
 
 app = flask.Flask(__name__)
 app.config.from_object(__name__)
@@ -42,19 +43,126 @@ def index():
 def createslides():
     creds = get_credentials()
     form = SlideForm()
+    information = get_info(form.name.data)
+    paragraphs = information["paragraphs"]
+    title = information["title"]
+    PBF = {
+        "propertyState": "RENDERED",
+        "solidFill": {
+            "color": {
+                "rgbColor": {
+                    "red": 1.0,
+                    "green": 0.0,
+                    "blue": 0.0,
+                }
+            },
+            "alpha" : 1.0
+        }
+    }
+    # Create presentation
     body = {
-        'title': "Test Presentation2"
+        'title': title,
     }
     slides_service = build('slides', 'v1', credentials=creds)
     presentation = slides_service.presentations() \
     .create(body=body).execute()
     print('Created presentation with ID: {0}'.format(
         presentation.get('presentationId')))
+
+    # populates the title
+    first_slide = presentation.get('slides')[0]
+    header_text = first_slide.get('pageElements')[0]
+
+    pt350 = {
+        'magnitude': 350,
+        'unit': 'PT'
+    }
+    requests = []
+    requests.append(
+        {
+            'insertText': {
+                'objectId': header_text.get("objectId"),
+                'insertionIndex': 0,
+                'text': title,
+            }
+        })
+    element_id = 0
+    page_id = 0
+    for p in paragraphs:
+        new_slide = {
+            'createSlide': {
+                'objectId': "hacker" + str(page_id),
+                'insertionIndex': '1',
+                'slideLayoutReference': {
+                    'predefinedLayout': 'BLANK'
+                },
+            },
+        }
+        requests.append(new_slide)
+        text_box = {
+            'createShape': {
+                'objectId': "MY-TEXT" + str(element_id),
+                'shapeType': 'TEXT_BOX',
+                'elementProperties': {
+                    'pageObjectId': "hacker" + str(page_id),
+                    'size': {
+                        'height': pt350,
+                        'width': pt350
+                    },
+                    'transform': {
+                        'scaleX': 1,
+                        'scaleY': 1,
+                        'translateX': 350,
+                        'translateY': 100,
+                        'unit': 'PT'
+                    }
+                }
+            }
+        }
+        requests.append(text_box)
+        text = {
+            # Insert text into the box, using the supplied element ID.
+            'insertText': {
+                'objectId': "MY-TEXT" + str(element_id),
+                'insertionIndex': 0,
+                'text': p,
+            }
+        }
+        requests.append(text)
+        color = {
+            "updatePageProperties": {
+                "objectId": "hacker" + str(page_id),
+                "pageProperties": {
+                "pageBackgroundFill": PBF
+                },
+                "fields": "pageBackgroundFill"
+            }
+        }
+        requests.append(color)
+        page_id = page_id + 1
+        element_id = element_id + 1
+    body = {
+        'requests': requests
+    }
+    response = slides_service.presentations() \
+    .batchUpdate(presentationId= presentation.get('presentationId'), body=body).execute()
+
     return flask.render_template("index.html", form=form)
 
 class SlideForm(FlaskForm):
    name = TextField("Your Text")
-		
+
+def get_info(url):
+    results = {}
+    response = get(url)
+    html_soup = BeautifulSoup(response.text, 'html.parser')
+    paragraphs = [para.getText() for para in html_soup.find_all('p')]
+    results["paragraphs"] = paragraphs
+    title = html_soup.find('h1').getText()
+    results["title"] = title
+    return results
+
+
 @app.route('/oauth2callback')
 def oauth2callback():
     flow = client.flow_from_clientsecrets('client_id.json',
