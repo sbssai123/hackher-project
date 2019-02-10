@@ -8,14 +8,16 @@ Simply copy the link to a news article of your choice, and paste it in the text 
 
 Check the link provided to see your new power point slide! 
 
---
 
-To run this locally, do: 
+
+To run this locally, do the following. 
+
 > export FLASK_APP=__init__.py
 > flask run
+
 Open the link http://127.0.0.1:5000/ in a browser.
 Copy and paste a news article, hit submit, click the resulting link, and see your new slides!
 
--- 
+
 
 This project was created at Hack(H)er413 at UMass Amherst using the Google Cloud Platform APIs.
