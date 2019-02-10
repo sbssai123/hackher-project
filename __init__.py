@@ -1,12 +1,4 @@
 #!/usr/bin/python3
-##
-# Flask Drive Example App
-#
-# @author Prahlad Yeri <prahladyeri@yahoo.com>
-# @date 30-12-2016
-# Dependency:
-# 1. pip install flask google-api-python-client
-# 2. make sure you have client_id.json in this same directory.
 
 import os
 import flask
@@ -35,9 +27,8 @@ def index():
         return flask.redirect(flask.url_for('oauth2callback'))
     else:
         print('now calling fetch')
-        all_files = fetch("'root' in parents and mimeType = 'application/vnd.google-apps.folder'", sort='modifiedTime desc')
         form = SlideForm()
-        return flask.render_template("index.html", form=form, files=all_files)
+        return flask.render_template("index.html", form=form)
 
 @app.route('/create-slides', methods=['POST'])
 def createslides():
@@ -147,7 +138,10 @@ def createslides():
     response = slides_service.presentations() \
     .batchUpdate(presentationId= presentation.get('presentationId'), body=body).execute()
 
-    return flask.render_template("index.html", form=form)
+    display_url = "https://docs.google.com/presentation/d/" + presentation.get('presentationId')
+
+    return flask.render_template("index.html", form=form, url = display_url)
+
 
 class SlideForm(FlaskForm):
    name = TextField("Your Text")

@@ -6,9 +6,6 @@
     {% block header %}{% endblock %}
   </header>
   {% block content %}
-    {% for file in files %}
-        <h2>{{ file["name"] }}</h2>
-    {% endfor %}
     <form action="/create-slides" method="post">
       {{ form.csrf }}
       <div class="input text">
@@ -16,5 +13,8 @@
       <div class="input submit">
         <input type="submit" value="Submit"></div>
     </form>
+    {% if url%}
+      <h3>View Your Presentation <a target="_blank" href={{url}}>Here:</a></h3>
+    {% endif %}
   {% endblock %}
 </section>
