@@ -15,10 +15,15 @@ from apiclient import discovery
 from apiclient.http import MediaIoBaseDownload, MediaFileUpload
 from oauth2client import client
 from oauth2client import tools
+from googleapiclient.discovery import build
 from oauth2client.file import Storage
+from flask_wtf import FlaskForm
+from wtforms import TextField
 
 
 app = flask.Flask(__name__)
+app.config.from_object(__name__)
+app.config['SECRET_KEY'] = '7d441f27d441f27567d441f2b6176a'
 
 @app.route('/')
 def index():
@@ -30,7 +35,25 @@ def index():
     else:
         print('now calling fetch')
         all_files = fetch("'root' in parents and mimeType = 'application/vnd.google-apps.folder'", sort='modifiedTime desc')
-    return flask.render_template("index.html", files=all_files)
+        form = SlideForm()
+        return flask.render_template("index.html", form=form, files=all_files)
+
+@app.route('/create-slides', methods=['POST'])
+def createslides():
+    creds = get_credentials()
+    form = SlideForm()
+    body = {
+        'title': "Test Presentation2"
+    }
+    slides_service = build('slides', 'v1', credentials=creds)
+    presentation = slides_service.presentations() \
+    .create(body=body).execute()
+    print('Created presentation with ID: {0}'.format(
+        presentation.get('presentationId')))
+    return flask.render_template("index.html", form=form)
+
+class SlideForm(FlaskForm):
+   name = TextField("Your Text")
 		
 @app.route('/oauth2callback')
 def oauth2callback():

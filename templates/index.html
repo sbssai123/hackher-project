@@ -9,5 +9,12 @@
     {% for file in files %}
         <h2>{{ file["name"] }}</h2>
     {% endfor %}
+    <form action="/create-slides" method="post">
+      {{ form.csrf }}
+      <div class="input text">
+        {{ form.name.label }} {{ form.name }}</div>
+      <div class="input submit">
+        <input type="submit" value="Submit"></div>
+    </form>
   {% endblock %}
 </section>
