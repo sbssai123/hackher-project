@@ -146,7 +146,7 @@ def createslides():
 
 
 class SlideForm(FlaskForm):
-   name = TextField("Your Text")
+   name = TextField("", render_kw={"placeholder": "Link to Your Article"})
 
 def get_info(url):
     results = {}

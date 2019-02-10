@@ -1,20 +1,47 @@
 <!doctype html>
-<title>{% block title %}{% endblock %}</title>
-<link rel="stylesheet" type= "text/css" href="{{ url_for('static', filename='style.css') }}">
-<section class="content">
-  <header>
-    {% block header %}{% endblock %}
-  </header>
-  {% block content %}
-    <form action="/create-slides" method="post">
-      {{ form.csrf }}
-      <div class="input text" id="text-box">
-        {{ form.name.label }} {{ form.name }}</div>
-      <div class="input submit">
-        <input type="submit" value="Submit"></div>
-    </form>
-    {% if url%}
-      <h3>View Your Presentation <a target="_blank" href={{url}}>Here:</a></h3>
-    {% endif %}
-  {% endblock %}
-</section>
+<head>
+    <title>{% block title %}{% endblock %}</title>
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+    <link rel="stylesheet" type= "text/css" href="static/style.css">
+    <style>
+      #name {
+        width: 50%;
+        border: 1px solid;
+        padding: 10px;
+        box-shadow: 5px 10px #888888;
+      }
+    </style>
+</head>
+<body style="background-color: #fccfc7">
+  <div class="container-fluid">
+    <section class="content">
+      <header>
+        {% block header %}{% endblock %}
+      </header>
+      {% block content %}
+      <h1 style="margin-left: 35vw; margin-top: 14%; font-size:50px;">Got Senioritis??</h1>
+        <form action="/create-slides" method="post">
+          {{ form.csrf }}
+          <div class="row">
+            <div class="input text" style="margin-left: 25vw; margin-top: 20px; width:100%">
+              {{ form.name }}</div>
+          </div>
+          <div class="row">
+            <div class="input submit" style="margin-left: 70%; margin-top: 20px;">
+              <input class="btn btn-info" type="submit" value="Submit"></div>
+          </div>
+        </form>
+        {% if url%}
+          <h4 class="card" style="margin-left: 35vw;">View Your Presentation <a target="_blank" href={{url}}>Here</a></h4>
+        {% endif %}
+      {% endblock %}
+    </section>
+  </div>
+</body>
