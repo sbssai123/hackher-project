@@ -112,8 +112,8 @@ def createslides():
                     'transform': {
                         'scaleX': 1,
                         'scaleY': 1,
-                        'translateX': 350,
-                        'translateY': 100,
+                        'translateX': 80,
+                        'translateY': 80,
                         'unit': 'PT'
                     }
                 }
@@ -175,7 +175,7 @@ def oauth2callback():
     else:
         auth_code = flask.request.args.get('code')
         credentials = flow.step2_exchange(auth_code)
-        open('credentials.json','w').write(credentials.to_json()) # write access token to credentials.json locally 
+        open('credentials.json','w').write(credentials.to_json()) # write access token to credentials.json locally
         return flask.redirect(flask.url_for('index'))
 
 def get_credentials():
@@ -206,7 +206,7 @@ def download_file(file_id, output_file):
 	#file_id = '0BwwA4oUTeiV1UVNwOHItT0xfa2M'
 	request = service.files().export_media(fileId=file_id,mimeType='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 	#request = service.files().get_media(fileId=file_id)
-	
+
 	fh = open(output_file,'wb') #io.BytesIO()
 	downloader = MediaIoBaseDownload(fh, request)
 	done = False
@@ -215,7 +215,7 @@ def download_file(file_id, output_file):
 		#print ("Download %d%%." % int(status.progress() * 100))
 	fh.close()
 	#return fh
-	
+
 def update_file(file_id, local_file):
 	credentials = get_credentials()
 	http = credentials.authorize(httplib2.Http())
@@ -230,7 +230,7 @@ def update_file(file_id, local_file):
 		#body=file,
 		#newRevision=True,
 		media_body=media_body).execute()
-		
+
 if __name__ == '__main__':
 	if os.path.exists('client_id.json') == False:
 		print('Client secrets file (client_id.json) not found in the app path.')
