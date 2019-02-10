@@ -13,10 +13,16 @@ from flask_wtf import FlaskForm
 from wtforms import TextField
 from requests import get
 from bs4 import BeautifulSoup
+# Imports the Google Cloud client library
+from google.cloud import language
+from google.cloud.language import enums
+from google.cloud.language import types
 
 app = flask.Flask(__name__)
 app.config.from_object(__name__)
 app.config['SECRET_KEY'] = '7d441f27d441f27567d441f2b6176a'
+# Instantiates a client
+client_language = language.LanguageServiceClient()
 
 @app.route('/')
 def index():
@@ -41,11 +47,7 @@ def createslides():
         "propertyState": "RENDERED",
         "solidFill": {
             "color": {
-                "rgbColor": {
-                    "red": 1.0,
-                    "green": 0.0,
-                    "blue": 0.0,
-                }
+                "themeColor": information["theme"]
             },
             "alpha" : 1.0
         }
@@ -151,11 +153,31 @@ def get_info(url):
     response = get(url)
     html_soup = BeautifulSoup(response.text, 'html.parser')
     paragraphs = [para.getText() for para in html_soup.find_all('p')]
-    results["paragraphs"] = paragraphs
     title = html_soup.find('h1').getText()
+    # text = " ".join(paragraphs)
+    document = types.Document(
+    content=title,
+    type=enums.Document.Type.PLAIN_TEXT)
+
+    # Detects the sentiment of the text
+    sentiment = client_language.analyze_sentiment(document=document).document_sentiment
+    results["paragraphs"] = paragraphs
     results["title"] = title
+    results["theme"] = determine_color(sentiment.score)
+    print("sentiment score", sentiment.score)
     return results
 
+def determine_color(score):
+    if score < -.7:
+        return "DARK1"
+    elif score >= -.7 and score < -.4:
+        return "DARK2"
+    elif score >= -.4 and score < 0:
+        return "ACCENT2"
+    elif score >= 0 and score  < .5:
+        return "ACCENT1"
+    else:
+        return "ACCENT6"
 
 @app.route('/oauth2callback')
 def oauth2callback():
@@ -183,6 +205,7 @@ def get_credentials():
 	else:
 		print("Credentials fetched successfully.")
 		return credentials
+
 
 def fetch(query, sort='modifiedTime desc'):
 	credentials = get_credentials()
